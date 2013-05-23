@@ -268,7 +268,10 @@ function ding_entity_field_formatter_info() {
  * Implements hook_field_formatter_view().
  */
 function ding_entity_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
-  $element = array();
+  $element = array(
+    // Remove default theme.
+    '#theme' => ''
+  );
 
   foreach ($items as $delta => $item) {
     switch ($display['type']) {
@@ -280,6 +283,9 @@ function ding_entity_field_formatter_view($entity_type, $entity, $field, $instan
         break;
     }
   }
+
+  $element['#prefix'] = '<div class="btn-toolbar entity-buttons"><div class="btn-group">';
+  $element['#suffix'] = '</div></div>';
 
   return $element;
 }
