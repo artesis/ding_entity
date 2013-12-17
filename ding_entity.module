@@ -254,6 +254,9 @@ function ding_entity_field_formatter_info() {
   $format['ding_entity_buttons_default'] = array(
     'label' => t('Default'),
     'field types' => array('ding_entity_buttons'),
+    'settings' => array(
+      'entity_action_active_buttons' => array(),
+    ),
   );
 
 /*
@@ -265,10 +268,79 @@ function ding_entity_field_formatter_info() {
 
   $format['ding_entity_buttons_link_to_newsearch'] = array(
     'label' => t('Link to new search'),
-    'field types' => array('ding_entity_buttons')
+    'field types' => array('ding_entity_buttons'),
+    'settings' => array(
+      'entity_action_active_buttons' => array(),
+    ),
   );
 
   return $format;
+}
+
+/**
+ * Implements hook_field_formatter_settings_form().
+ */
+function ding_entity_field_formatter_settings_form($field, $instance, $view_mode, $form, $form_state) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+  $element = NULL;
+
+  switch ($field['type']) {
+    case 'ding_entity_buttons':
+      $modules = ding_entity_modules_hook_implementation();
+      $element['entity_action_active_buttons'] = array(
+        '#type' => 'checkboxes',
+        '#title' => t('Active entity buttons'),
+        '#options' => $modules,
+        '#default_value' => !empty($settings['entity_action_active_buttons']) ? $settings['entity_action_active_buttons'] : array_keys($modules),
+      );
+      break;
+  }
+
+  return $element;
+}
+
+/**
+ * Find out which modules implement certain hook.
+ *
+ * Extend a little bit the response of module_implements() with human-readable module name.
+ *
+ * @param string $hook
+ *   Hook name.
+ *
+ * @return array
+ *   A structured array keyed by module name.
+ */
+function ding_entity_modules_hook_implementation($hook = 'ding_entity_buttons') {
+  $modules = module_implements($hook);
+  $implementations = array();
+
+  foreach ($modules as $module) {
+    $info = system_get_info('module', $module);
+    $implementations[$module] = $info['name'];
+  }
+
+  return $implementations;
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary().
+ */
+function ding_entity_field_formatter_settings_summary($field, $instance, $view_mode) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+
+  $summary = '';
+  switch ($field['type']) {
+    case 'ding_entity_buttons':
+      $implementations = ding_entity_modules_hook_implementation();
+      $active_modules = !empty($settings['entity_action_active_buttons']) ? array_filter($settings['entity_action_active_buttons']) : $implementations;
+      $active_modules = array_intersect_key($implementations, $active_modules);
+      $summary .= t('Active buttons: @buttons.', array('@buttons' => implode(', ', $active_modules)));
+      break;
+  }
+
+  return $summary;
 }
 
 /**
@@ -279,14 +351,27 @@ function ding_entity_field_formatter_view($entity_type, $entity, $field, $instan
     // Remove default theme.
     '#theme' => ''
   );
+  $settings = $display['settings'];
 
   foreach ($items as $delta => $item) {
     switch ($display['type']) {
       case 'ding_entity_buttons_default':
-        $element[$delta] = module_invoke_all('ding_entity_buttons', 'ding_entity', $entity, 'ajax');
-        break;
       case 'ding_entity_buttons_link_to_newsearch':
-        $element[$delta] = module_invoke_all('ding_entity_buttons', 'ding_entity', $entity, true);
+        $active_modules = !empty($settings['entity_action_active_buttons']) ?
+            array_filter($settings['entity_action_active_buttons']) :
+            ding_entity_modules_hook_implementation();
+        $buttons = array();
+        $call_type = 'ajax';
+
+        if ($display['type'] == 'ding_entity_buttons_link_to_newsearch') {
+          $call_type = TRUE;
+        }
+
+        foreach (array_keys($active_modules) as $module) {
+          $buttons[] = module_invoke($module, 'ding_entity_buttons', 'ding_entity', $entity, $call_type);
+        }
+
+        $element[$delta] = $buttons;
         break;
     }
   }
