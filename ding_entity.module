@@ -370,6 +370,13 @@ function ding_entity_field_formatter_view($entity_type, $entity, $field, $instan
         foreach (array_keys($active_modules) as $module) {
           $buttons[] = module_invoke($module, 'ding_entity_buttons', 'ding_entity', $entity, $call_type);
         }
+        // Removes unnecessary lvl, because sorting by weight doesn't works correct.
+        $btns = array();
+        foreach ($buttons as $lvl1) {
+          foreach ($lvl1 as $lvl2) {
+            $btns[] = $lvl2;
+          }
+        }
 
         $element[$delta] = $buttons;
         break;
