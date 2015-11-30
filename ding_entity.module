@@ -378,7 +378,7 @@ function ding_entity_field_formatter_view($entity_type, $entity, $field, $instan
           }
         }
 
-        $element[$delta] = $buttons;
+        $element[$delta] = $btns;
         break;
     }
   }
